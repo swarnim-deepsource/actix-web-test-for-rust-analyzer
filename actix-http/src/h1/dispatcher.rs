@@ -1368,23 +1368,3 @@ fn trace_timer_states(
         trace!("  shutdown {}", &shutdown_timer);
     }
 }
-
-// async fn dispatch_h1(io: impl AsyncRead + AsyncWrite) {
-//     let mut read_buf = BytesMut::new();
-//     let mut write_buf = BytesMut::new();
-
-//     // IO read
-
-//     // decode request
-
-//     // service call
-
-//     // queue response
-
-//     // clean read IO
-//     // augment response
-
-//     // write response to IO
-
-//     // repeat
-// }
