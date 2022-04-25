@@ -185,7 +185,9 @@ pin_project! {
         None,
         ExpectCall { #[pin] fut: X::Future },
         ServiceCall { #[pin] fut: S::Future },
+        SendResponse { res: Option<Response<B>> },
         SendPayload { #[pin] body: B },
+        // SendErrorResponse { res: Response<()>, body: BoxBody },
         SendErrorPayload { #[pin] body: BoxBody },
     }
 }
@@ -216,9 +218,15 @@ where
             Self::ServiceCall { .. } => {
                 f.debug_struct("State::ServiceCall").finish_non_exhaustive()
             }
+            Self::SendResponse { .. } => f
+                .debug_struct("State::SendResponse")
+                .finish_non_exhaustive(),
             Self::SendPayload { .. } => {
                 f.debug_struct("State::SendPayload").finish_non_exhaustive()
             }
+            // Self::SendErrorResponse { .. } => f
+            //     .debug_struct("State::SendErrorResponse")
+            //     .finish_non_exhaustive(),
             Self::SendErrorPayload { .. } => f
                 .debug_struct("State::SendErrorPayload")
                 .finish_non_exhaustive(),
@@ -379,11 +387,8 @@ where
         Ok(size)
     }
 
-    fn send_response(
-        mut self: Pin<&mut Self>,
-        res: Response<()>,
-        body: B,
-    ) -> Result<(), DispatchError> {
+    fn send_response(mut self: Pin<&mut Self>, res: Response<B>) -> Result<(), DispatchError> {
+        let (res, body) = res.replace_body(());
         let size = self.as_mut().send_response_inner(res, &body)?;
         let mut this = self.project();
         this.state.set(match size {
@@ -397,11 +402,17 @@ where
         Ok(())
     }
 
+    fn queue_response(self: Pin<&mut Self>, res: Response<B>) {
+        self.project()
+            .state
+            .set(State::SendResponse { res: Some(res) });
+    }
+
     fn send_error_response(
         mut self: Pin<&mut Self>,
-        res: Response<()>,
-        body: BoxBody,
+        res: Response<BoxBody>,
     ) -> Result<(), DispatchError> {
+        let (res, body) = res.replace_body(());
         let size = self.as_mut().send_response_inner(res, &body)?;
         let mut this = self.project();
         this.state.set(match size {
@@ -449,7 +460,8 @@ where
                         // send_response would update InnerDispatcher state to SendPayload or None
                         // (If response body is empty)
                         // continue loop to poll it
-                        self.as_mut().send_error_response(res, BoxBody::new(()))?;
+                        self.as_mut()
+                            .send_error_response(res.set_body(BoxBody::new(())))?;
                     }
 
                     // return with upgrade request and poll it exclusively
@@ -470,15 +482,12 @@ where
                     match fut.poll(cx) {
                         // service call resolved. send response.
                         Poll::Ready(Ok(res)) => {
-                            let (res, body) = res.into().replace_body(());
-                            self.as_mut().send_response(res, body)?;
+                            self.as_mut().queue_response(res.into());
                         }
 
                         // send service call error as response
                         Poll::Ready(Err(err)) => {
-                            let res: Response<BoxBody> = err.into();
-                            let (res, body) = res.replace_body(());
-                            self.as_mut().send_error_response(res, body)?;
+                            self.as_mut().send_error_response(err.into())?;
                         }
 
                         // service call pending and could be waiting for more chunk messages
@@ -486,12 +495,31 @@ where
                         Poll::Pending => {
                             // no new message is decoded and no new payload is fed
                             // nothing to do except waiting for new incoming data from client
-                            if !self.as_mut().poll_request(cx)? {
-                                return Ok(PollResponse::DoNothing);
-                            }
+
+                            // optimisation disabled so that poll_request is called from only one place
+                            // if !self.as_mut().poll_request(cx)? {
+                            return Ok(PollResponse::DoNothing);
+                            // }
+
                             // else loop
                         }
                     }
+                }
+
+                StateProj::SendResponse { res } => {
+                    tracing::trace!("sending response");
+                    let mut res = res.take().expect("response should be take-able");
+
+                    if this.flags.contains(Flags::SHUTDOWN) {
+                        tracing::trace!("shutdown flag set; assuming dirty read I/O");
+                        // shutdown flags occur when read I/O is not clean so connections should be
+                        // closed to avoid stuck or erroneous errors on next request
+                        res.head_mut().set_connection_type(ConnectionType::Close);
+                    }
+
+                    self.send_response(res)?;
+
+                    return Ok(PollResponse::DrainWriteBuf);
                 }
 
                 StateProj::SendPayload { mut body } => {
@@ -583,9 +611,7 @@ where
 
                         // send expect error as response
                         Poll::Ready(Err(err)) => {
-                            let res: Response<BoxBody> = err.into();
-                            let (res, body) = res.replace_body(());
-                            self.as_mut().send_error_response(res, body)?;
+                            self.as_mut().send_error_response(err.into())?;
                         }
 
                         // expect must be solved before progress can be made.
@@ -637,9 +663,7 @@ where
                         // on success to notify the dispatcher a new state is set and the outer loop
                         // should be continued
                         Poll::Ready(Err(err)) => {
-                            let res: Response<BoxBody> = err.into();
-                            let (res, body) = res.replace_body(());
-                            return self.send_error_response(res, body);
+                            return self.send_error_response(err.into());
                         }
 
                         // future is pending; return Ok(()) to notify that a new state is
@@ -655,19 +679,15 @@ where
                         // to notify the dispatcher a new state is set and the outer loop
                         // should be continue.
                         Poll::Ready(Ok(res)) => {
-                            let (res, body) = res.into().replace_body(());
-                            self.as_mut().send_response(res, body)
+                            self.as_mut().queue_response(res.into());
+                            Ok(())
                         }
 
                         // see the comment on ExpectCall state branch's Pending
                         Poll::Pending => Ok(()),
 
                         // see the comment on ExpectCall state branch's Ready(Err(_))
-                        Poll::Ready(Err(err)) => {
-                            let res: Response<BoxBody> = err.into();
-                            let (res, body) = res.replace_body(());
-                            self.as_mut().send_error_response(res, body)
-                        }
+                        Poll::Ready(Err(err)) => self.as_mut().send_error_response(err.into()),
                     };
                 }
 
@@ -688,7 +708,6 @@ where
         cx: &mut Context<'_>,
     ) -> Result<bool, DispatchError> {
         let pipeline_queue_full = self.messages.len() >= MAX_PIPELINED_MESSAGES;
-        let can_not_read = !self.can_read(cx);
 
         // limit amount of non-processed requests
         if pipeline_queue_full {
@@ -696,69 +715,6 @@ where
         }
 
         let mut this = self.as_mut().project();
-
-        if can_not_read {
-            debug!("cannot read request payload");
-
-            if let Some(sender) = &this.payload {
-                // ...maybe handler does not want to read any more payload...
-                if let PayloadStatus::Dropped = sender.need_read(cx) {
-                    debug!("handler dropped payload early; attempt to clean connection");
-                    // ...in which case poll request payload a few times
-                    loop {
-                        match this.codec.decode(this.read_buf)? {
-                            Some(msg) => {
-                                match msg {
-                                    // payload decoded did not yield EOF yet
-                                    Message::Chunk(Some(_)) => {
-                                        // if non-clean connection, next loop iter will detect empty
-                                        // read buffer and close connection
-                                    }
-
-                                    // connection is in clean state for next request
-                                    Message::Chunk(None) => {
-                                        debug!("connection successfully cleaned");
-
-                                        // reset dispatcher state
-                                        let _ = this.payload.take();
-                                        this.state.set(State::None);
-
-                                        // break out of payload decode loop
-                                        break;
-                                    }
-
-                                    // Either whole payload is read and loop is broken or more data
-                                    // was expected in which case connection is closed. In both
-                                    // situations dispatcher cannot get here.
-                                    Message::Item(_) => {
-                                        unreachable!("dispatcher is in payload receive state")
-                                    }
-                                }
-                            }
-
-                            // not enough info to decide if connection is going to be clean or not
-                            None => {
-                                error!(
-                                    "handler did not read whole payload and dispatcher could not \
-                                    drain read buf; return 500 and close connection"
-                                );
-
-                                this.flags.insert(Flags::SHUTDOWN);
-                                let mut res = Response::internal_server_error().drop_body();
-                                res.head_mut().set_connection_type(ConnectionType::Close);
-                                this.messages.push_back(DispatcherMessage::Error(res));
-                                *this.error = Some(DispatchError::HandlerDroppedPayload);
-                                return Ok(true);
-                            }
-                        }
-                    }
-                }
-            } else {
-                // can_not_read and no request payload
-                return Ok(false);
-            }
-        }
-
         let mut updated = false;
 
         // decode from read buf as many full requests as possible
@@ -891,6 +847,75 @@ where
             }
         }
 
+        let can_not_read = !self.can_read(cx);
+        let mut this = self.as_mut().project();
+
+        if can_not_read {
+            // request payload is not readable...
+            debug!("cannot read request payload");
+
+            if let Some(sender) = &this.payload {
+                // ...maybe handler does not want to read any more payload...
+                if let PayloadStatus::Dropped = sender.need_read(cx) {
+                    debug!("handler dropped payload early; attempt to clean connection");
+                    // ...in which case poll request payload a few times
+                    loop {
+                        match this.codec.decode(this.read_buf)? {
+                            Some(msg) => {
+                                match msg {
+                                    // payload decoded did not yield EOF yet
+                                    Message::Chunk(Some(_)) => {
+                                        // if non-clean connection, next loop iter will detect empty
+                                        // read buffer and close connection
+                                    }
+
+                                    // connection is in clean state for next request
+                                    Message::Chunk(None) => {
+                                        debug!("connection successfully cleaned");
+
+                                        // reset dispatcher state
+                                        let _ = this.payload.take();
+                                        this.state.set(State::None);
+
+                                        // break out of payload decode loop
+                                        break;
+                                    }
+
+                                    // Either whole payload is read and loop is broken or more data
+                                    // was expected in which case connection is closed. In both
+                                    // situations dispatcher cannot get here.
+                                    Message::Item(_) => {
+                                        unreachable!("dispatcher is in payload receive state")
+                                    }
+                                }
+                            }
+
+                            // not enough info to decide if connection is going to be clean or not
+                            None => {
+                                // TODO: use debug level
+                                tracing::info!(
+                                    "handler did not read whole payload and dispatcher could not \
+                                    drain read buf; return 500 and close connection"
+                                );
+
+                                this.flags.insert(Flags::SHUTDOWN);
+
+                                // let mut res = Response::internal_server_error().drop_body();
+                                // res.head_mut().set_connection_type(ConnectionType::Close);
+                                // this.messages.push_back(DispatcherMessage::Error(res));
+                                // *this.error = Some(DispatchError::HandlerDroppedPayload);
+
+                                return Ok(true);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // can_not_read and no request payload
+                return Ok(false);
+            }
+        }
+
         Ok(updated)
     }
 
@@ -909,10 +934,10 @@ where
                         replying with 408 and closing connection"
                 );
 
-                let _ = self.as_mut().send_error_response(
-                    Response::with_body(StatusCode::REQUEST_TIMEOUT, ()),
+                let _ = self.as_mut().send_error_response(Response::with_body(
+                    StatusCode::REQUEST_TIMEOUT,
                     BoxBody::new(()),
-                );
+                ));
 
                 self.project().flags.insert(Flags::SHUTDOWN);
             }
@@ -1188,6 +1213,7 @@ where
                         }
                     }
 
+                    // process request(s) and queue response
                     inner.as_mut().poll_request(cx)?;
 
                     if should_disconnect {
@@ -1325,3 +1351,23 @@ fn trace_timer_states(
         trace!("  shutdown {}", &shutdown_timer);
     }
 }
+
+// async fn dispatch_h1(io: impl AsyncRead + AsyncWrite) {
+//     let mut read_buf = BytesMut::new();
+//     let mut write_buf = BytesMut::new();
+
+//     // IO read
+
+//     // decode request
+
+//     // service call
+
+//     // queue response
+
+//     // clean read IO
+//     // augment response
+
+//     // write response to IO
+
+//     // repeat
+// }
