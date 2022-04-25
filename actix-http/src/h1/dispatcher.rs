@@ -187,7 +187,7 @@ pin_project! {
         ServiceCall { #[pin] fut: S::Future },
         SendResponse { res: Option<Response<B>> },
         SendPayload { #[pin] body: B },
-        // SendErrorResponse { res: Response<()>, body: BoxBody },
+        SendErrorResponse { res: Option<Response<BoxBody>> },
         SendErrorPayload { #[pin] body: BoxBody },
     }
 }
@@ -224,9 +224,9 @@ where
             Self::SendPayload { .. } => {
                 f.debug_struct("State::SendPayload").finish_non_exhaustive()
             }
-            // Self::SendErrorResponse { .. } => f
-            //     .debug_struct("State::SendErrorResponse")
-            //     .finish_non_exhaustive(),
+            Self::SendErrorResponse { .. } => f
+                .debug_struct("State::SendErrorResponse")
+                .finish_non_exhaustive(),
             Self::SendErrorPayload { .. } => f
                 .debug_struct("State::SendErrorPayload")
                 .finish_non_exhaustive(),
@@ -426,6 +426,12 @@ where
         Ok(())
     }
 
+    fn queue_error_response(self: Pin<&mut Self>, res: Response<BoxBody>) {
+        self.project()
+            .state
+            .set(State::SendErrorResponse { res: Some(res) });
+    }
+
     fn send_continue(self: Pin<&mut Self>) {
         self.project()
             .write_buf
@@ -461,7 +467,7 @@ where
                         // (If response body is empty)
                         // continue loop to poll it
                         self.as_mut()
-                            .send_error_response(res.set_body(BoxBody::new(())))?;
+                            .queue_error_response(res.set_body(BoxBody::new(())));
                     }
 
                     // return with upgrade request and poll it exclusively
@@ -487,7 +493,7 @@ where
 
                         // send service call error as response
                         Poll::Ready(Err(err)) => {
-                            self.as_mut().send_error_response(err.into())?;
+                            self.as_mut().queue_error_response(err.into());
                         }
 
                         // service call pending and could be waiting for more chunk messages
@@ -507,7 +513,6 @@ where
                 }
 
                 StateProj::SendResponse { res } => {
-                    trace!("sending response");
                     let mut res = res.take().expect("response should be take-able");
 
                     if this.flags.contains(Flags::SHUTDOWN) {
@@ -554,6 +559,23 @@ where
 
                     // buffer is beyond max size
                     // return and try to write the whole buffer to I/O stream.
+                    return Ok(PollResponse::DrainWriteBuf);
+                }
+
+                StateProj::SendErrorResponse { res } => {
+                    // TODO: de-dupe impl with SendResponse
+
+                    let mut res = res.take().expect("response should be take-able");
+
+                    if this.flags.contains(Flags::SHUTDOWN) {
+                        trace!("shutdown flag set; assuming dirty read I/O");
+                        // shutdown flags occur when read I/O is not clean so connections should be
+                        // closed to avoid stuck or erroneous errors on next request
+                        res.head_mut().set_connection_type(ConnectionType::Close);
+                    }
+
+                    self.send_error_response(res)?;
+
                     return Ok(PollResponse::DrainWriteBuf);
                 }
 
@@ -611,7 +633,7 @@ where
 
                         // send expect error as response
                         Poll::Ready(Err(err)) => {
-                            self.as_mut().send_error_response(err.into())?;
+                            self.as_mut().queue_error_response(err.into());
                         }
 
                         // expect must be solved before progress can be made.
@@ -663,7 +685,8 @@ where
                         // on success to notify the dispatcher a new state is set and the outer loop
                         // should be continued
                         Poll::Ready(Err(err)) => {
-                            return self.send_error_response(err.into());
+                            self.queue_error_response(err.into());
+                            return Ok(());
                         }
 
                         // future is pending; return Ok(()) to notify that a new state is
@@ -687,7 +710,10 @@ where
                         Poll::Pending => Ok(()),
 
                         // see the comment on ExpectCall state branch's Ready(Err(_))
-                        Poll::Ready(Err(err)) => self.as_mut().send_error_response(err.into()),
+                        Poll::Ready(Err(err)) => {
+                            self.as_mut().queue_error_response(err.into());
+                            Ok(())
+                        }
                     };
                 }
 
@@ -925,10 +951,10 @@ where
 
                 trace!("timed out on slow request; replying with 408 and closing connection");
 
-                let _ = self.as_mut().send_error_response(Response::with_body(
-                    StatusCode::REQUEST_TIMEOUT,
-                    BoxBody::new(()),
-                ));
+                let mut res =
+                    Response::with_body(StatusCode::REQUEST_TIMEOUT, BoxBody::new(()));
+                res.head_mut().set_connection_type(ConnectionType::Close);
+                self.as_mut().send_error_response(res)?;
 
                 self.project().flags.insert(Flags::SHUTDOWN);
             }
