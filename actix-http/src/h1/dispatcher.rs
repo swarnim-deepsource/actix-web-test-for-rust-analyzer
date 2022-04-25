@@ -507,11 +507,11 @@ where
                 }
 
                 StateProj::SendResponse { res } => {
-                    tracing::trace!("sending response");
+                    trace!("sending response");
                     let mut res = res.take().expect("response should be take-able");
 
                     if this.flags.contains(Flags::SHUTDOWN) {
-                        tracing::trace!("shutdown flag set; assuming dirty read I/O");
+                        trace!("shutdown flag set; assuming dirty read I/O");
                         // shutdown flags occur when read I/O is not clean so connections should be
                         // closed to avoid stuck or erroneous errors on next request
                         res.head_mut().set_connection_type(ConnectionType::Close);
@@ -892,18 +892,12 @@ where
 
                             // not enough info to decide if connection is going to be clean or not
                             None => {
-                                // TODO: use debug level
-                                tracing::info!(
+                                debug!(
                                     "handler did not read whole payload and dispatcher could not \
                                     drain read buf; return 500 and close connection"
                                 );
 
                                 this.flags.insert(Flags::SHUTDOWN);
-
-                                // let mut res = Response::internal_server_error().drop_body();
-                                // res.head_mut().set_connection_type(ConnectionType::Close);
-                                // this.messages.push_back(DispatcherMessage::Error(res));
-                                // *this.error = Some(DispatchError::HandlerDroppedPayload);
 
                                 return Ok(true);
                             }
@@ -929,10 +923,7 @@ where
             if timer.as_mut().poll(cx).is_ready() {
                 // timeout on first request (slow request) return 408
 
-                trace!(
-                    "timed out on slow request; \
-                        replying with 408 and closing connection"
-                );
+                trace!("timed out on slow request; replying with 408 and closing connection");
 
                 let _ = self.as_mut().send_error_response(Response::with_body(
                     StatusCode::REQUEST_TIMEOUT,

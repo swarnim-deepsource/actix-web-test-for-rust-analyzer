@@ -1,6 +1,10 @@
 # Changes
 
 ## Unreleased - 2021-xx-xx
+### Fixed
+- Dropping the payload early and causing unclean connections no longer causes erroneous 500 responses. [#2745]
+
+[#2745]: https://github.com/actix/actix-web/issues/2745
 
 
 ## 3.0.4 - 2022-03-09

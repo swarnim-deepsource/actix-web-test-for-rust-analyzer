@@ -582,7 +582,6 @@ async fn pipelining_ok_then_bad() {
 }
 
 #[actix_rt::test]
-#[ignore]
 async fn expect_handling() {
     lazy(|cx| {
         let mut buf = TestSeqBuffer::empty();
