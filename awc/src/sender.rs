@@ -106,8 +106,9 @@ impl Future for SendClientRequest {
                 }
 
                 let res = futures_core::ready!(send.as_mut().poll(cx)).map(|res| {
-                    res.into_client_response()._timeout(delay.take()).map_body(
-                        |head, payload| {
+                    res.into_client_response()
+                        ._timeout(delay.take())
+                        .map_body(|head, payload| {
                             if *response_decompress {
                                 Payload::Stream {
                                     payload: Decoder::from_headers(payload, &head.headers),
@@ -117,8 +118,7 @@ impl Future for SendClientRequest {
                                     payload: Decoder::new(payload, ContentEncoding::Identity),
                                 }
                             }
-                        },
-                    )
+                        })
                 });
 
                 Poll::Ready(res)

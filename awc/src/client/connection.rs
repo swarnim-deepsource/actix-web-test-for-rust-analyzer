@@ -83,10 +83,7 @@ impl<Io: ConnectionIo> AsyncWrite for H1Connection<Io> {
         self.io_pin_mut().poll_flush(cx)
     }
 
-    fn poll_shutdown(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), io::Error>> {
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         self.io_pin_mut().poll_shutdown(cx)
     }
 

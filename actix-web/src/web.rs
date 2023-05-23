@@ -200,10 +200,7 @@ pub fn service<T: IntoPatterns>(path: T) -> WebService {
 ///     // the client will resolve this redirect to /api/to-path
 ///     .service(web::redirect("/api/from-path", "to-path"));
 /// ```
-pub fn redirect(
-    from: impl Into<Cow<'static, str>>,
-    to: impl Into<Cow<'static, str>>,
-) -> Redirect {
+pub fn redirect(from: impl Into<Cow<'static, str>>, to: impl Into<Cow<'static, str>>) -> Redirect {
     Redirect::new(from, to)
 }
 
