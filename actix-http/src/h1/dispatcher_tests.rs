@@ -43,8 +43,8 @@ fn status_service(
     fn_service(move |_req: Request| ready(Ok::<_, Error>(Response::new(status))))
 }
 
-fn echo_path_service(
-) -> impl Service<Request, Response = Response<impl MessageBody>, Error = Error> {
+fn echo_path_service() -> impl Service<Request, Response = Response<impl MessageBody>, Error = Error>
+{
     fn_service(|req: Request| {
         let path = req.path().as_bytes();
         ready(Ok::<_, Error>(
@@ -53,8 +53,8 @@ fn echo_path_service(
     })
 }
 
-fn drop_payload_service(
-) -> impl Service<Request, Response = Response<&'static str>, Error = Error> {
+fn drop_payload_service() -> impl Service<Request, Response = Response<&'static str>, Error = Error>
+{
     fn_service(|mut req: Request| async move {
         let _ = req.take_payload();
         Ok::<_, Error>(Response::with_body(StatusCode::OK, "payload dropped"))

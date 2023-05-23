@@ -1,5 +1,5 @@
-use actix_web_codegen::*;
 use actix_web::http::Method;
+use actix_web_codegen::*;
 use std::str::FromStr;
 
 #[route("/", method = "hello")]

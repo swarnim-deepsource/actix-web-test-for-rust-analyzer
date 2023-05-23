@@ -5,9 +5,7 @@
 // expanded manually.
 //
 // See <https://github.com/rust-lang/rust/issues/83375>
-pub use actix_http::error::{
-    ContentTypeError, DispatchError, HttpError, ParseError, PayloadError,
-};
+pub use actix_http::error::{ContentTypeError, DispatchError, HttpError, ParseError, PayloadError};
 
 use derive_more::{Display, Error, From};
 use serde_json::error::Error as JsonError;
