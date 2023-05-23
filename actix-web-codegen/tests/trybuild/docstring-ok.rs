@@ -1,4 +1,4 @@
-use actix_web::{Responder, HttpResponse, App};
+use actix_web::{App, HttpResponse, Responder};
 use actix_web_codegen::*;
 
 /// doc comments shouldn't break anything

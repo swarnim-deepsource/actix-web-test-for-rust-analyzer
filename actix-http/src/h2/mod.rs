@@ -58,10 +58,7 @@ impl Stream for Payload {
     }
 }
 
-pub(crate) fn handshake_with_timeout<T>(
-    io: T,
-    config: &ServiceConfig,
-) -> HandshakeWithTimeout<T>
+pub(crate) fn handshake_with_timeout<T>(io: T, config: &ServiceConfig) -> HandshakeWithTimeout<T>
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {

@@ -20,9 +20,8 @@ use serde::{de::DeserializeOwned, Serialize};
 #[cfg(feature = "__compress")]
 use crate::dev::Decompress;
 use crate::{
-    body::EitherBody, error::UrlencodedError, extract::FromRequest,
-    http::header::CONTENT_LENGTH, web, Error, HttpMessage, HttpRequest, HttpResponse,
-    Responder,
+    body::EitherBody, error::UrlencodedError, extract::FromRequest, http::header::CONTENT_LENGTH,
+    web, Error, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
 
 /// URL encoded payload extractor and responder.

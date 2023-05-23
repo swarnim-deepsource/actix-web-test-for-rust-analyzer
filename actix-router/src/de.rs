@@ -486,11 +486,7 @@ impl<'de> de::VariantAccess<'de> for UnitVariant {
         Err(de::value::Error::custom("not supported"))
     }
 
-    fn struct_variant<V>(
-        self,
-        _: &'static [&'static str],
-        _: V,
-    ) -> Result<V::Value, Self::Error>
+    fn struct_variant<V>(self, _: &'static [&'static str], _: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
@@ -572,13 +568,11 @@ mod tests {
         assert_eq!(s.key, "name");
         assert_eq!(s.value, 32);
 
-        let s: (String, u8) =
-            de::Deserialize::deserialize(PathDeserializer::new(&path)).unwrap();
+        let s: (String, u8) = de::Deserialize::deserialize(PathDeserializer::new(&path)).unwrap();
         assert_eq!(s.0, "name");
         assert_eq!(s.1, 32);
 
-        let res: Vec<String> =
-            de::Deserialize::deserialize(PathDeserializer::new(&path)).unwrap();
+        let res: Vec<String> = de::Deserialize::deserialize(PathDeserializer::new(&path)).unwrap();
         assert_eq!(res[0], "name".to_owned());
         assert_eq!(res[1], "32".to_owned());
     }

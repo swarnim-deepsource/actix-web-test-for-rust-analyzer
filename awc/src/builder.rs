@@ -72,11 +72,8 @@ where
     /// Use custom connector service.
     pub fn connector<S1, Io1>(self, connector: Connector<S1>) -> ClientBuilder<S1, M>
     where
-        S1: Service<
-                ConnectInfo<Uri>,
-                Response = TcpConnection<Uri, Io1>,
-                Error = TcpConnectError,
-            > + Clone
+        S1: Service<ConnectInfo<Uri>, Response = TcpConnection<Uri, Io1>, Error = TcpConnectError>
+            + Clone
             + 'static,
         Io1: ActixStream + fmt::Debug + 'static,
     {
@@ -227,10 +224,7 @@ where
     /// Registers middleware, in the form of a middleware component (type), that runs during inbound
     /// and/or outbound processing in the request life-cycle (request -> response),
     /// modifying request/response as necessary, across all requests managed by the `Client`.
-    pub fn wrap<S1, M1>(
-        self,
-        mw: M1,
-    ) -> ClientBuilder<S, NestTransform<M, M1, S1, ConnectRequest>>
+    pub fn wrap<S1, M1>(self, mw: M1) -> ClientBuilder<S, NestTransform<M, M1, S1, ConnectRequest>>
     where
         M: Transform<S1, ConnectRequest>,
         M1: Transform<M::Transform, ConnectRequest>,
@@ -253,8 +247,7 @@ where
     pub fn finish(self) -> Client
     where
         M: Transform<DefaultConnector<ConnectorService<S, Io>>, ConnectRequest> + 'static,
-        M::Transform:
-            Service<ConnectRequest, Response = ConnectResponse, Error = SendRequestError>,
+        M::Transform: Service<ConnectRequest, Response = ConnectResponse, Error = SendRequestError>,
     {
         let max_redirects = self.max_redirects;
 
@@ -269,8 +262,7 @@ where
     fn _finish(self) -> Client
     where
         M: Transform<DefaultConnector<ConnectorService<S, Io>>, ConnectRequest> + 'static,
-        M::Transform:
-            Service<ConnectRequest, Response = ConnectResponse, Error = SendRequestError>,
+        M::Transform: Service<ConnectRequest, Response = ConnectResponse, Error = SendRequestError>,
     {
         let mut connector = self.connector;
 

@@ -1,6 +1,5 @@
 use actix_http::{
-    body::EitherBody, error::HttpError, header::HeaderMap, header::TryIntoHeaderPair,
-    StatusCode,
+    body::EitherBody, error::HttpError, header::HeaderMap, header::TryIntoHeaderPair, StatusCode,
 };
 
 use crate::{HttpRequest, HttpResponse, Responder};
