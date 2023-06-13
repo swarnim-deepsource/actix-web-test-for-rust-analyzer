@@ -1,6 +1,6 @@
 use actix_web_codegen::*;
 
-#[route("/", method="GET", method="HEAD")]
+#[route("/", method = "GET", method = "HEAD")]
 async fn index() -> String {
     "Hello World!".to_owned()
 }

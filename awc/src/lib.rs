@@ -134,9 +134,7 @@ pub mod http {
     //! Various HTTP related types.
 
     // TODO: figure out how best to expose http::Error vs actix_http::Error
-    pub use actix_http::{
-        header, uri, ConnectionType, Error, Method, StatusCode, Uri, Version,
-    };
+    pub use actix_http::{header, uri, ConnectionType, Error, Method, StatusCode, Uri, Version};
 }
 
 pub use self::builder::ClientBuilder;

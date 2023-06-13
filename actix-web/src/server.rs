@@ -437,9 +437,8 @@ where
                         .local_addr(addr);
 
                     if let Some(handler) = on_connect_fn.clone() {
-                        svc = svc.on_connect_ext(move |io: &_, ext: _| {
-                            (handler)(io as &dyn Any, ext)
-                        })
+                        svc =
+                            svc.on_connect_ext(move |io: &_, ext: _| (handler)(io as &dyn Any, ext))
                     };
 
                     let fac = factory()
@@ -481,9 +480,8 @@ where
                         .local_addr(addr);
 
                     if let Some(handler) = on_connect_fn.clone() {
-                        svc = svc.on_connect_ext(move |io: &_, ext: _| {
-                            (handler)(io as &dyn Any, ext)
-                        })
+                        svc =
+                            svc.on_connect_ext(move |io: &_, ext: _| (handler)(io as &dyn Any, ext))
                     };
 
                     let fac = factory()
@@ -715,8 +713,7 @@ where
                     .client_disconnect_timeout(c.client_disconnect_timeout);
 
                 if let Some(handler) = on_connect_fn.clone() {
-                    svc = svc
-                        .on_connect_ext(move |io: &_, ext: _| (handler)(io as &dyn Any, ext));
+                    svc = svc.on_connect_ext(move |io: &_, ext: _| (handler)(io as &dyn Any, ext));
                 }
 
                 let fac = factory()
@@ -759,10 +756,7 @@ where
 }
 
 /// Bind TCP listeners to socket addresses resolved from `addrs` with options.
-fn bind_addrs(
-    addrs: impl net::ToSocketAddrs,
-    backlog: u32,
-) -> io::Result<Vec<net::TcpListener>> {
+fn bind_addrs(addrs: impl net::ToSocketAddrs, backlog: u32) -> io::Result<Vec<net::TcpListener>> {
     let mut err = None;
     let mut success = false;
     let mut sockets = Vec::new();

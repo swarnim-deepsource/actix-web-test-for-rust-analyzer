@@ -473,9 +473,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_serde_json_in_body() {
-        let resp = HttpResponse::Ok().body(
-            serde_json::to_vec(&serde_json::json!({ "test-key": "test-value" })).unwrap(),
-        );
+        let resp = HttpResponse::Ok()
+            .body(serde_json::to_vec(&serde_json::json!({ "test-key": "test-value" })).unwrap());
 
         assert_eq!(
             body::to_bytes(resp.into_body()).await.unwrap().as_ref(),

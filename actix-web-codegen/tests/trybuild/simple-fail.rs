@@ -22,7 +22,7 @@ async fn four() -> String {
     "Hello World!".to_owned()
 }
 
-#[delete("/five", method="GET")]
+#[delete("/five", method = "GET")]
 async fn five() -> String {
     "Hello World!".to_owned()
 }
