@@ -232,12 +232,8 @@ impl ServiceConfig {
     pub fn default_service<F, U>(&mut self, f: F) -> &mut Self
     where
         F: IntoServiceFactory<U, ServiceRequest>,
-        U: ServiceFactory<
-                ServiceRequest,
-                Config = (),
-                Response = ServiceResponse,
-                Error = Error,
-            > + 'static,
+        U: ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse, Error = Error>
+            + 'static,
         U::InitError: std::fmt::Debug,
     {
         let svc = f

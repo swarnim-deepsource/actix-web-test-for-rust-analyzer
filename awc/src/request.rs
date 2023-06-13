@@ -291,10 +291,7 @@ impl ClientRequest {
     }
 
     /// Sets the query part of the request
-    pub fn query<T: Serialize>(
-        mut self,
-        query: &T,
-    ) -> Result<Self, serde_urlencoded::ser::Error> {
+    pub fn query<T: Serialize>(mut self, query: &T) -> Result<Self, serde_urlencoded::ser::Error> {
         let mut parts = self.head.uri.clone().into_parts();
 
         if let Some(path_and_query) = parts.path_and_query {

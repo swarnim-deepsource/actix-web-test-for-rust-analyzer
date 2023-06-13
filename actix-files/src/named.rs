@@ -8,13 +8,13 @@ use std::{
 use actix_web::{
     body::{self, BoxBody, SizedStream},
     dev::{
-        self, AppService, HttpServiceFactory, ResourceDef, Service, ServiceFactory,
-        ServiceRequest, ServiceResponse,
+        self, AppService, HttpServiceFactory, ResourceDef, Service, ServiceFactory, ServiceRequest,
+        ServiceResponse,
     },
     http::{
         header::{
-            self, Charset, ContentDisposition, ContentEncoding, DispositionParam,
-            DispositionType, ExtendedValue, HeaderValue,
+            self, Charset, ContentDisposition, ContentEncoding, DispositionParam, DispositionType,
+            ExtendedValue, HeaderValue,
         },
         StatusCode,
     },
@@ -139,8 +139,7 @@ impl NamedFile {
                 _ => DispositionType::Attachment,
             };
 
-            let mut parameters =
-                vec![DispositionParam::Filename(String::from(filename.as_ref()))];
+            let mut parameters = vec![DispositionParam::Filename(String::from(filename.as_ref()))];
 
             if !filename.is_ascii() {
                 parameters.push(DispositionParam::FilenameExt(ExtendedValue {

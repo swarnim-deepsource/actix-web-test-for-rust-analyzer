@@ -16,8 +16,7 @@ use futures_core::{ready, stream::Stream};
 use mime::Mime;
 
 use crate::{
-    dev, error::ErrorBadRequest, http::header, web, Error, FromRequest, HttpMessage,
-    HttpRequest,
+    dev, error::ErrorBadRequest, http::header, web, Error, FromRequest, HttpMessage, HttpRequest,
 };
 
 /// Extract a request's raw payload stream.
