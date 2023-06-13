@@ -7,8 +7,8 @@ use std::{
 };
 
 use actix_http::{
-    error::PayloadError, header::HeaderMap, BoxedPayloadStream, Extensions, HttpMessage,
-    Payload, ResponseHead, StatusCode, Version,
+    error::PayloadError, header::HeaderMap, BoxedPayloadStream, Extensions, HttpMessage, Payload,
+    ResponseHead, StatusCode, Version,
 };
 use actix_rt::time::{sleep, Sleep};
 use bytes::Bytes;
