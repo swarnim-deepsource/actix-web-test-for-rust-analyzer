@@ -5,9 +5,7 @@ use std::task::{Context, Poll};
 
 use actix::dev::{AsyncContextParts, ContextFut, ContextParts, Envelope, Mailbox, ToEnvelope};
 use actix::fut::ActorFuture;
-use actix::{
-    Actor, ActorContext, ActorState, Addr, AsyncContext, Handler, Message, SpawnHandle,
-};
+use actix::{Actor, ActorContext, ActorState, Addr, AsyncContext, Handler, Message, SpawnHandle};
 use actix_web::error::Error;
 use bytes::Bytes;
 use futures_core::Stream;

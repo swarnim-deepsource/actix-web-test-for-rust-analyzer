@@ -117,11 +117,7 @@ where
     U: Default,
 {
     /// Registers resource for specified path.
-    pub fn path(
-        &mut self,
-        path: impl IntoPatterns,
-        val: T,
-    ) -> (&mut ResourceDef, &mut T, &mut U) {
+    pub fn path(&mut self, path: impl IntoPatterns, val: T) -> (&mut ResourceDef, &mut T, &mut U) {
         self.push(ResourceDef::new(path), val, U::default())
     }
 

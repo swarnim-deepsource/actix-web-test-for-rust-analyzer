@@ -49,9 +49,9 @@ where
             ))),
 
             #[cfg(feature = "compress-gzip")]
-            ContentEncoding::Deflate => Some(ContentDecoder::Deflate(Box::new(
-                ZlibDecoder::new(Writer::new()),
-            ))),
+            ContentEncoding::Deflate => Some(ContentDecoder::Deflate(Box::new(ZlibDecoder::new(
+                Writer::new(),
+            )))),
 
             #[cfg(feature = "compress-gzip")]
             ContentEncoding::Gzip => Some(ContentDecoder::Gzip(Box::new(GzDecoder::new(

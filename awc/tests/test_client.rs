@@ -33,9 +33,8 @@ const STR: &str = const_str::repeat!(S, 100);
 #[actix_rt::test]
 async fn simple() {
     let srv = actix_test::start(|| {
-        App::new().service(
-            web::resource("/").route(web::to(|| async { HttpResponse::Ok().body(STR) })),
-        )
+        App::new()
+            .service(web::resource("/").route(web::to(|| async { HttpResponse::Ok().body(STR) })))
     });
 
     let request = srv.get("/").insert_header(("x-test", "111")).send();
@@ -61,9 +60,8 @@ async fn simple() {
 #[actix_rt::test]
 async fn json() {
     let srv = actix_test::start(|| {
-        App::new().service(
-            web::resource("/").route(web::to(|_: web::Json<String>| HttpResponse::Ok())),
-        )
+        App::new()
+            .service(web::resource("/").route(web::to(|_: web::Json<String>| HttpResponse::Ok())))
     });
 
     let request = srv
@@ -340,8 +338,7 @@ async fn connection_wait_queue() {
         .and_then(
             HttpService::new(map_config(
                 App::new().service(
-                    web::resource("/")
-                        .route(web::to(|| async { HttpResponse::Ok().body(STR) })),
+                    web::resource("/").route(web::to(|| async { HttpResponse::Ok().body(STR) })),
                 ),
                 |_| AppConfig::default(),
             ))
@@ -449,9 +446,7 @@ async fn no_decompress() {
     let srv = actix_test::start(|| {
         App::new()
             .wrap(actix_web::middleware::Compress::default())
-            .service(
-                web::resource("/").route(web::to(|| async { HttpResponse::Ok().body(STR) })),
-            )
+            .service(web::resource("/").route(web::to(|| async { HttpResponse::Ok().body(STR) })))
     });
 
     let mut res = awc::Client::new()
@@ -833,12 +828,12 @@ async fn local_address() {
     let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
     let srv = actix_test::start(move || {
-        App::new().service(web::resource("/").route(web::to(
-            move |req: HttpRequest| async move {
+        App::new().service(
+            web::resource("/").route(web::to(move |req: HttpRequest| async move {
                 assert_eq!(req.peer_addr().unwrap().ip(), ip);
                 Ok::<_, Error>(HttpResponse::Ok())
-            },
-        )))
+            })),
+        )
     });
     let client = awc::Client::builder().local_address(ip).finish();
 

@@ -201,9 +201,7 @@ where
 }
 
 /// Fallible version of [`read_body`] that allows testing MessageBody reading errors.
-pub async fn try_read_body<B>(
-    res: ServiceResponse<B>,
-) -> Result<Bytes, <B as MessageBody>::Error>
+pub async fn try_read_body<B>(res: ServiceResponse<B>) -> Result<Bytes, <B as MessageBody>::Error>
 where
     B: MessageBody,
 {
@@ -364,8 +362,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        dev::ServiceRequest, http::header, test::TestRequest, web, App, HttpMessage,
-        HttpResponse,
+        dev::ServiceRequest, http::header, test::TestRequest, web, App, HttpMessage, HttpResponse,
     };
 
     #[actix_rt::test]
@@ -409,10 +406,11 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_response_json() {
-        let app = init_service(App::new().service(web::resource("/people").route(
-            web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
-        )))
-        .await;
+        let app =
+            init_service(App::new().service(web::resource("/people").route(
+                web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
+            )))
+            .await;
 
         let payload = r#"{"id":"12345","name":"User name"}"#.as_bytes();
 
@@ -428,10 +426,11 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_try_response_json_error() {
-        let app = init_service(App::new().service(web::resource("/people").route(
-            web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
-        )))
-        .await;
+        let app =
+            init_service(App::new().service(web::resource("/people").route(
+                web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
+            )))
+            .await;
 
         let payload = r#"{"id":"12345","name":"User name"}"#.as_bytes();
 
@@ -448,10 +447,11 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_body_json() {
-        let app = init_service(App::new().service(web::resource("/people").route(
-            web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
-        )))
-        .await;
+        let app =
+            init_service(App::new().service(web::resource("/people").route(
+                web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
+            )))
+            .await;
 
         let payload = r#"{"id":"12345","name":"User name"}"#.as_bytes();
 
@@ -468,10 +468,11 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_try_body_json_error() {
-        let app = init_service(App::new().service(web::resource("/people").route(
-            web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
-        )))
-        .await;
+        let app =
+            init_service(App::new().service(web::resource("/people").route(
+                web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
+            )))
+            .await;
 
         // Use a number for id to cause a deserialization error.
         let payload = r#"{"id":12345,"name":"User name"}"#.as_bytes();
@@ -489,10 +490,11 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_request_response_form() {
-        let app = init_service(App::new().service(web::resource("/people").route(
-            web::post().to(|person: web::Form<Person>| HttpResponse::Ok().json(person)),
-        )))
-        .await;
+        let app =
+            init_service(App::new().service(web::resource("/people").route(
+                web::post().to(|person: web::Form<Person>| HttpResponse::Ok().json(person)),
+            )))
+            .await;
 
         let payload = Person {
             id: "12345".to_string(),
@@ -532,10 +534,11 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_request_response_json() {
-        let app = init_service(App::new().service(web::resource("/people").route(
-            web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
-        )))
-        .await;
+        let app =
+            init_service(App::new().service(web::resource("/people").route(
+                web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
+            )))
+            .await;
 
         let payload = Person {
             id: "12345".to_string(),
@@ -566,9 +569,11 @@ mod tests {
                 InitError = (),
             >,
         > {
-            App::new().service(web::resource("/people").route(
-                web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
-            ))
+            App::new().service(
+                web::resource("/people").route(
+                    web::post().to(|person: web::Json<Person>| HttpResponse::Ok().json(person)),
+                ),
+            )
         }
 
         async fn test_service(

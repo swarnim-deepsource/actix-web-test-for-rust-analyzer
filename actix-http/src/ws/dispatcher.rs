@@ -413,9 +413,7 @@ mod inner {
                     }
                     State::Error(_) => {
                         // flush write buffer
-                        if !this.framed.is_write_buf_empty()
-                            && this.framed.flush(cx).is_pending()
-                        {
+                        if !this.framed.is_write_buf_empty() && this.framed.flush(cx).is_pending() {
                             return Poll::Pending;
                         }
                         Poll::Ready(Err(this.state.take_error()))
